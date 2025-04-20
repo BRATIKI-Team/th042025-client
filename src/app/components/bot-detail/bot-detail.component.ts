@@ -146,49 +146,46 @@ export class BotDetailComponent implements OnInit, OnDestroy {
       '30D': []
     };
     
-    if (!bot.metrics) return;
+    if (!bot.metrics || Object.keys(bot.metrics).length === 0) return;
     
     try {
-      // Проверяем тип metrics
-      if (bot.metrics instanceof Map) {
-        // Если это Map, используем entries()
-        const allEntries = Array.from(bot.metrics.entries())
-          .sort((a, b) => a[0].getTime() - b[0].getTime());
-        
-        // Если нет метрик, выходим
-        if (allEntries.length === 0) return;
-        
-        // Создаем данные для разных временных периодов
-        this.chartData = {
-          '7D': this.getChartDataForPeriod(allEntries, 7),
-          '14D': this.getChartDataForPeriod(allEntries, 14),
-          '30D': this.getChartDataForPeriod(allEntries, 30)
-        };
-      } else {
-        console.error('Тип metrics не является Map');
-      }
+      // Получаем все метрики, отсортированные по дате
+      const allEntries = this.getMetricEntries();
+      
+      // Если нет метрик, выходим
+      if (allEntries.length === 0) return;
+      
+      // Создаем данные для разных временных периодов
+      this.chartData = {
+        '7D': this.getChartDataForPeriod(allEntries, 7),
+        '14D': this.getChartDataForPeriod(allEntries, 14),
+        '30D': this.getChartDataForPeriod(allEntries, 30)
+      };
     } catch (error) {
       console.error('Ошибка при обработке метрик:', error);
     }
   }
   
   getChartDataForPeriod(entries: [Date, number][], days: number): number[] {
-    // Берем только последние N дней из метрик
-    const recentEntries = entries.slice(-days);
+    // Заполняем массив с нулевыми значениями для всех дней
+    const result: number[] = new Array(days).fill(0);
     
-    // Если у нас недостаточно данных, добавляем нулевые значения в начало
-    const result: number[] = [];
+    // Если нет данных, возвращаем массив нулей
+    if (entries.length === 0) return result;
     
-    if (recentEntries.length < days) {
-      const missingDays = days - recentEntries.length;
-      for (let i = 0; i < missingDays; i++) {
-        result.push(0);
+    // Определяем самую позднюю дату в данных (обычно сегодня)
+    const latestDate = new Date(Math.max(...entries.map(e => e[0].getTime())));
+    
+    // Для каждой записи вычисляем индекс в массиве результатов
+    entries.forEach(([date, value]) => {
+      // Разница в днях между самой поздней датой и текущей датой
+      const diffDays = Math.floor((latestDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Если разница в пределах периода, добавляем значение
+      if (diffDays < days) {
+        const index = days - diffDays - 1;
+        result[index] = value;
       }
-    }
-    
-    // Добавляем фактические значения
-    recentEntries.forEach(entry => {
-      result.push(entry[1]);
     });
     
     return result;
@@ -202,20 +199,22 @@ export class BotDetailComponent implements OnInit, OnDestroy {
   }
   
   getActivityLevel(): string {
-    if (!this.bot || !this.bot.metrics || this.bot.metrics.size === 0) return 'Low';
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 'Low';
     
     const entries = this.getMetricEntries();
     if (entries.length === 0) return 'Low';
     
-    const lastValue = entries[entries.length - 1][1];
+    // Вычисляем среднее значение активности за последний период
+    const sum = entries.reduce((total, entry) => total + entry[1], 0);
+    const avg = sum / entries.length;
     
-    if (lastValue > 500) return 'High';
-    if (lastValue > 100) return 'Medium';
+    if (avg > 500) return 'High';
+    if (avg > 100) return 'Medium';
     return 'Low';
   }
   
   getAverageMessages(): number {
-    if (!this.bot || !this.bot.metrics || this.bot.metrics.size === 0) return 0;
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
     
     const entries = this.getMetricEntries();
     if (entries.length === 0) return 0;
@@ -227,7 +226,7 @@ export class BotDetailComponent implements OnInit, OnDestroy {
   }
   
   getUserGrowth(): number {
-    if (!this.bot || !this.bot.metrics || this.bot.metrics.size === 0) return 0;
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
     
     const entries = this.getMetricEntries();
     if (entries.length < 2) return 0;
@@ -250,39 +249,77 @@ export class BotDetailComponent implements OnInit, OnDestroy {
   }
 
   getMetricEntries(): [Date, number][] {
-    if (!this.bot || !this.bot.metrics) return [];
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return [];
     
     try {
-      // Проверяем тип metrics
-      if (this.bot.metrics instanceof Map) {
-        // Если это Map, используем entries()
-        return Array.from(this.bot.metrics.entries())
-          .sort((a, b) => a[0].getTime() - b[0].getTime())
-          .slice(-7);
-      } else {
-        console.error('Тип metrics не является Map');
-        return [];
-      }
+      // Получаем текущую дату
+      const today = new Date();
+      
+      // Создаем объект для группировки метрик по дням
+      const dailyMetrics: Map<string, number> = new Map();
+      
+      // Преобразуем объект metrics и группируем по дням
+      Object.entries(this.bot.metrics).forEach(([dateStr, value]) => {
+        const date = new Date(dateStr);
+        const dateKey = date.toISOString().split('T')[0]; // Получаем только дату в формате YYYY-MM-DD
+        
+        // Если для этого дня уже есть значение, увеличиваем его
+        if (dailyMetrics.has(dateKey)) {
+          dailyMetrics.set(dateKey, dailyMetrics.get(dateKey)! + value);
+        } else {
+          dailyMetrics.set(dateKey, value);
+        }
+      });
+      
+      // Преобразуем сгруппированные данные в массив пар [Date, number]
+      const entries: [Date, number][] = Array.from(dailyMetrics.entries())
+        .map(([dateStr, value]) => {
+          return [new Date(dateStr), value] as [Date, number];
+        })
+        .sort((a, b) => a[0].getTime() - b[0].getTime());
+      
+      // Фильтруем записи за последние 7 дней
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      
+      const recentEntries = entries.filter(entry => entry[0] >= sevenDaysAgo);
+      
+      return recentEntries.length > 0 ? recentEntries : entries.slice(-7);
     } catch (error) {
       console.error('Ошибка при получении метрик:', error);
       return [];
     }
   }
 
+  getLastMetricValue(): number {
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
+    
+    const entries = this.getMetricEntries();
+    return entries.length > 0 ? entries[entries.length - 1][1] : 0;
+  }
+
+  getMetricAverage(): number {
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
+    
+    const entries = this.getMetricEntries();
+    if (entries.length === 0) return 0;
+    
+    const sum = entries.reduce((total, entry) => total + entry[1], 0);
+    return Math.round(sum / entries.length);
+  }
+
   getMaxMetricValue(): number {
-    if (!this.bot || !this.bot.metrics || this.bot.metrics.size === 0) return 100;
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 100;
     
-    let max = 0;
+    const entries = this.getMetricEntries();
+    if (entries.length === 0) return 100;
     
-    this.bot.metrics.forEach((value) => {
-      if (value > max) max = value;
-    });
-    
+    const max = Math.max(...entries.map(entry => entry[1]));
     return max > 0 ? max : 100;
   }
 
   getGrowthRate(): number {
-    if (!this.bot || !this.bot.metrics || this.bot.metrics.size === 0) return 0;
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
     
     const entries = this.getMetricEntries();
     if (entries.length < 2) return 0;
@@ -290,7 +327,7 @@ export class BotDetailComponent implements OnInit, OnDestroy {
     const current = entries[entries.length - 1][1];
     const previous = entries[0][1];
     
-    if (previous === 0) return 100;
+    if (previous === 0) return 0;
     
     return Math.round(((current - previous) / previous) * 100);
   }

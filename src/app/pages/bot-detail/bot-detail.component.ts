@@ -603,36 +603,34 @@ export class BotDetailComponent implements OnInit {
   }
   
   getLastMetricValue(): number {
-    if (!this.bot || this.bot.metrics.size === 0) return 0;
-    // Получаем последнее значение из Map
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
+    // Получаем последнее значение из метрик
     const entries = this.getMetricEntries();
     return entries[entries.length - 1][1];
   }
   
   getMetricAverage(): number {
-    if (!this.bot || this.bot.metrics.size === 0) return 0;
-    let sum = 0;
-    let count = 0;
-    this.bot.metrics.forEach((value) => {
-      sum += value;
-      count++;
-    });
-    return Math.round(sum / count);
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
+    const values = Object.values(this.bot.metrics);
+    if (values.length === 0) return 0;
+    
+    const sum = values.reduce((total, value) => total + value, 0);
+    return Math.round(sum / values.length);
   }
   
   getMaxMetricValue(): number {
-    if (!this.bot || this.bot.metrics.size === 0) return 0;
-    let max = 0;
-    this.bot.metrics.forEach((value) => {
-      if (value > max) max = value;
-    });
-    return max;
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return 0;
+    const values = Object.values(this.bot.metrics);
+    if (values.length === 0) return 0;
+    
+    return Math.max(...values);
   }
   
   getMetricEntries(): [Date, number][] {
-    if (!this.bot || this.bot.metrics.size === 0) return [];
-    // Преобразуем Map в массив и сортируем по датам
-    return Array.from(this.bot.metrics.entries())
+    if (!this.bot || !this.bot.metrics || Object.keys(this.bot.metrics).length === 0) return [];
+    // Преобразуем Record<string, number> в массив пар [Date, number]
+    return Object.entries(this.bot.metrics)
+      .map(([dateStr, value]) => [new Date(dateStr), value] as [Date, number])
       .sort((a, b) => a[0].getTime() - b[0].getTime());
   }
 } 

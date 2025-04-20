@@ -33,8 +33,7 @@ export interface IBotDetail extends IBotLight {
     readonly description: string;
     readonly users_count: number;
     readonly sources: readonly IBotSource[];
-    // В интерфейсе используем Map для удобства работы с данными
-    readonly metrics: Map<Date, number>;
+    readonly metrics: Record<string, number>;
 }
 
 // Интерфейс для метрик в формате API

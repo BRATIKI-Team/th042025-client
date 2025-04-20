@@ -69,23 +69,21 @@ export class BotService {
 
   /**
    * Подготовка данных для отправки на API
-   * Преобразует Map<Date, number> в массив объектов {date, value}
+   * Преобразует Record<string, number> в массив объектов {date, value}
    */
   private prepareForApi(bot: Partial<IBotDetail>): Partial<IBotDetailApi> {
-    if (!bot.metrics) return bot as Partial<IBotDetailApi>;
-
-    // Создаем новый объект
+    if (!bot) return bot as Partial<IBotDetailApi>;
+    
     const { metrics, ...rest } = bot;
     
-    // Преобразуем Map<Date, number> в массив объектов {date, value}
-    let metricsArray: { date: string, value: number }[] = [];
+    // Если метрик нет, возвращаем бота без изменений
+    if (!metrics) return bot as Partial<IBotDetailApi>;
     
-    if (metrics instanceof Map) {
-      metricsArray = Array.from(metrics.entries()).map(([date, value]) => ({
-        date: date.toISOString(),
-        value
-      }));
-    }
+    // Преобразуем Record<string, number> в массив объектов {date, value}
+    const metricsArray = Object.entries(metrics).map(([date, value]) => ({
+      date,
+      value
+    }));
     
     // Возвращаем новый объект с преобразованными метриками
     return {
@@ -95,7 +93,7 @@ export class BotService {
   }
   
   /**
-   * Преобразует ответ API в формат IBotDetail с Map для metrics
+   * Преобразует ответ API в формат IBotDetail с метриками в формате Record<string, number>
    */
   private transformBotResponse(response: IBotDetailApi): IBotDetail {
     // Проверяем, что response содержит необходимые поля
@@ -105,15 +103,15 @@ export class BotService {
     const result = { ...response } as any;
     
     // Преобразуем данные метрик из формата API (массив с объектами {date, value})
-    // в Map<Date, number>, который используется в интерфейсе IBotDetail
+    // в Record<string, number>
     if (response.metrics && Array.isArray(response.metrics)) {
-      const metricsMap = new Map<Date, number>();
+      const metricsRecord: Record<string, number> = {};
       
       response.metrics.forEach(metric => {
-        metricsMap.set(new Date(metric.date), metric.value);
+        metricsRecord[metric.date] = metric.value;
       });
       
-      result.metrics = metricsMap;
+      result.metrics = metricsRecord;
     }
     
     return result as IBotDetail;
