@@ -14,7 +14,7 @@ import { IBotLight, BotStatus } from '../../interfaces/bot.interface';
       <div class="dashboard-header">
         <h1>Панель управления ботами</h1>
         <div class="dashboard-actions">
-          <button class="btn-create">
+          <button class="btn-create" (click)="openTelegramBot($event)">
             <i class="add-icon">+</i> Добавить бота
           </button>
         </div>
@@ -401,5 +401,13 @@ export class BotListComponent implements OnInit {
         this.loadBots(); // Перезагрузка списка
       });
     });
+  }
+  
+  /**
+   * Открывает ссылку на Telegram бота в новой вкладке
+   */
+  openTelegramBot(event: Event): void {
+    event.preventDefault();
+    window.open('https://t.me/svodkihackathonbot', '_blank');
   }
 } 

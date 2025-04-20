@@ -14,7 +14,7 @@ import { Subject } from 'rxjs';
     <div class="sidebar">
       <div class="sidebar-header">
         <h2>Мои боты</h2>
-        <button class="add-button" title="Добавить нового бота">+</button>
+        <button class="add-button" title="Добавить нового бота" (click)="openTelegramBot($event)">+</button>
       </div>
       
       <div class="bot-list">
@@ -239,5 +239,13 @@ export class BotSidebarComponent implements OnInit, OnDestroy {
       .join('')
       .toUpperCase()
       .substring(0, 2);
+  }
+
+  /**
+   * Открывает ссылку на Telegram бота в новой вкладке
+   */
+  openTelegramBot(event: Event): void {
+    event.preventDefault();
+    window.open('https://t.me/svodkihackathonbot', '_blank');
   }
 } 
