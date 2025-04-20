@@ -1,0 +1,111 @@
+<div class="bot-detail-container" *ngIf="bot">
+  <!-- Информация о боте -->
+  <div class="bot-header-section">
+    <div class="bot-header">
+      <div class="bot-header-icon" [class.inactive]="bot.status === BotStatus.INACTIVE">
+        {{ getInitials(bot.name) }}
+      </div>
+      <div class="bot-header-info">
+        <div class="title-row">
+          <h1>{{ bot.name }}</h1>
+          <span class="status-badge" [class.active]="bot.status === BotStatus.ACTIVE">
+            {{ bot.status === BotStatus.ACTIVE ? 'Активен' : 'Неактивен' }}
+          </span>
+        </div>
+        <a [href]="getBotUrl(bot)" target="_blank" class="bot-link">{{ getBotUrl(bot) }}</a>
+        <div class="topic-wrapper">
+          <input type="checkbox" id="topic-toggle" class="topic-toggle">
+          <label for="topic-toggle" class="topic-content">{{ bot.topic }}</label>
+          <label for="topic-toggle" class="topic-expander" (click)="toggleTopicExpanded()">Показать {{ isTopicExpanded ? 'меньше' : 'больше' }}</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Метрики -->
+  <div class="metrics-section">
+    <h2 class="section-title">Ключевые метрики</h2>
+    <div class="metrics-cards">
+      <div class="metric-card">
+        <div class="metric-title">Активные пользователи</div>
+        <div class="metric-value">{{ botMetrics.activeUsers }}</div>
+        <div class="growth-indicator" [ngClass]="botMetrics.userGrowth >= 0 ? 'positive' : 'negative'">
+          <i class="fas" [ngClass]="botMetrics.userGrowth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+          {{ botMetrics.userGrowth }}%
+        </div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-title">Рост</div>
+        <div class="metric-value">{{ botMetrics.growthRate }}%</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-title">Сообщений / пользователя</div>
+        <div class="metric-value">{{ botMetrics.avgMessagesPerUser }}</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-title">Источники</div>
+        <div class="metric-value">{{ botMetrics.topSourceCount }}</div>
+        <div class="metric-title">{{ botMetrics.topSource }}</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-title">Активность</div>
+        <div class="metric-value">{{ botMetrics.activityLevel }}</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- График активности -->
+  <div class="chart-section">
+    <div class="chart-header">
+      <div class="chart-title">Ежедневная активность</div>
+      <div class="time-range-selector">
+        <button [ngClass]="{'active': selectedTimeRange === '7D'}" (click)="setTimeRange('7D')">7Д</button>
+        <button [ngClass]="{'active': selectedTimeRange === '14D'}" (click)="setTimeRange('14D')">14Д</button>
+        <button [ngClass]="{'active': selectedTimeRange === '30D'}" (click)="setTimeRange('30D')">30Д</button>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="activityChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Источники данных -->
+  <div class="sources-section">
+    <h2 class="section-title">Источники данных</h2>
+    <div class="sources-container">
+      <div *ngFor="let source of bot.sources" class="source-card">
+        <div class="source-icon" [ngClass]="getSourceTypeClass(source.type)">
+          <span>{{ getSourceTypeLabel(source.type) }}</span>
+        </div>
+        <div class="source-info">
+          <h3>{{ source.name }}</h3>
+          <p>{{ source.description }}</p>
+          <a [href]="source.url" target="_blank" class="source-link">{{ source.url }}</a>
+        </div>
+      </div>
+      
+      <div *ngIf="bot.sources.length === 0" class="empty-sources">
+        <div class="empty-icon">📄</div>
+        <p>Нет подключенных источников данных</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Состояние загрузки или ошибки -->
+<div class="empty-state" *ngIf="!bot && !loading">
+  <div class="empty-state-content">
+    <div class="empty-icon">🤖</div>
+    <h2>Бот не найден</h2>
+    <p>Выбранный бот не существует или был удален</p>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="loading-spinner"></div>
+  <p>Загрузка данных бота...</p>
+</div> 
