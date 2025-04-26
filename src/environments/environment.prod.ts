@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://opium-svodki.com:8000'
+  apiUrl: 'https://opium-svodki.ru:8000'
 }; 
